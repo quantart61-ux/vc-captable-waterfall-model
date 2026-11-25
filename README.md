@@ -12,7 +12,7 @@ The model evaluates **Vanguard Cloud Analytics Inc.**, a representative Series B
 - **SaaS Unit Economics & Pricing:** **$12.0M Current ARR** ($20.0M NTM ARR, **85% YoY growth**), **78% Gross Margin**, **124% Net Dollar Retention (NDR)**, **4.8x LTV/CAC**, **53.0% Rule of 40**, and a **0.82x Burn Multiple** (20.0 months cash runway), supporting a **7.5x Current ARR** ($90.0M) pre-money valuation.
 - **Cap Table & Dilution Mechanics:** Tracks ownership from Founding (`7.00M` shares) through a **$3.0M YC Post-Money SAFE** ($15.0M cap $\rightarrow$ 20.0% pre-Series A ownership), a **$40.0M Post-Money Series A** ($3.20/share with a 10.0% pre-money ESOP shuffle), and a **$120.0M Post-Money Series B** ($6.67/share with a 12.5% pre-money ESOP top-up), diluting Founders to **38.89%** across **18,000,000** fully diluted shares.
 - **Exit Waterfall & Conversion Equilibria:** Models Senior Series B **1.0x Participating Preferred (3.0x cap)** stacked above *pari passu* Series A and Seed **1.0x Non-Participating Preferred**. At a **$150M exit**, Series A and Seed rationally convert to Common (`$16.67M` / `2.08x` and `$11.67M` / `3.89x`) while Series B remains Preferred to capture participation (`$60.00M` / `2.00x`); at a **$400M IPO exit**, Series B converts to Common (`$100.00M` / `3.33x`) to exceed its `$90.0M` participation cap.
-- **VC Fund Economics ($200M Fund III):** Deducts **$36.0M** in lifetime management fees (2.0% investment period / 1.5% harvest step-down) and org expenses to yield **$164.0M Investable Capital**. Across **$475.0M** in gross portfolio value (`$340.0M` realized + `$135.0M` NAV), the fund achieves **2.90x Gross MOIC**, **2.38x Gross TVPI**, **1.70x DPI**, **$55.00M GP Carry** (clearing the 8% compounded hurdle), **2.10x LP Net TVPI**, and **14.44% LP Net IRR**.
+- **VC Fund Economics ($200M Fund III):** Deducts **$36.0M** in lifetime management fees (2.0% investment period / 1.5% harvest step-down) and org expenses from committed capital to yield **$164.0M Investable Capital**. Across **$475.0M** in gross portfolio value (`$340.0M` realized + `$135.0M` NAV), the fund achieves **2.90x Gross MOIC**, **2.38x Gross TVPI**, **1.70x DPI**, **$55.00M GP Carry**, **2.10x LP Net TVPI**, and **14.44% LP Net IRR**.
 
 ---
 
@@ -45,6 +45,8 @@ The model evaluates **Vanguard Cloud Analytics Inc.**, a representative Series B
 - **Tier 2 (Junior Preferred, *Pari Passu*):** Series A ($8.0M) and Series Seed ($3.0M) hold **1.0x Non-Participating Liquidation Preferences** subordinate to Series B.
 - **Nash Conversion Equilibrium:** Each preferred class independently elects to convert to Common Stock if and only if its pro-rata Common payout strictly exceeds its Preferred waterfall payout.
 
+The model's `find_conversion_thresholds()` function solves each class's unilateral-indifference equations on the exact piecewise-linear payout segments. Segment boundaries include each preferred claim being filled and the Series B 3.0x participation-cap plateau. It then verifies Nash equilibria on both sides of each candidate point. For this case study, the exact switches are **Seed SAFE at $64.571429M**, **Series A at $87.600000M**, and **Series B at $360.000000M** (at the participation-cap plateau). Running the script prints the threshold table.
+
 | Exit Valuation | Series B Payout (MOIC) | Series A Payout (MOIC) | Seed SAFE Payout (MOIC) | Founders Payout | ESOP Payout | Equilibrium Conversion State |
 | :--- | :---: | :---: | :---: | :---: | :---: | :--- |
 | **$25M (Distressed)** | **$25.00M** (0.83x) | $0.00M (0.00x) | $0.00M (0.00x) | $0.00M | $0.00M | `B:Pref \| A:Pref \| Seed:Pref` |
@@ -54,7 +56,7 @@ The model evaluates **Vanguard Cloud Analytics Inc.**, a representative Series B
 
 ---
 
-## 4. VC Fund Economics & European Carry Waterfall ($200.0M Fund)
+## 4. VC Fund Economics & Four-Tier European Carry Waterfall ($200.0M Fund)
 
 | Fund Metric | Value | Analytical Definition |
 | :--- | :---: | :--- |
@@ -65,8 +67,20 @@ The model evaluates **Vanguard Cloud Analytics Inc.**, a representative Series B
 | **Gross MOIC / Gross TVPI** | **2.90x / 2.38x** | Gross MOIC on Investable Capital ($164M); TVPI on Committed ($200M) |
 | **DPI / RVPI (Pre-Carry)** | **1.70x / 0.68x** | Distributed to Paid-In ($340M / $200M) + Residual Value ($135M / $200M) |
 | **8.0% Compounded Hurdle** | $305.39M | Cleared (`$475.0M > $305.39M` over 5.5-year avg hold) |
-| **GP Carried Interest (20%)** | **$55.00M** | $20\% \times (\$475.0\text{M} - \$200.0\text{M})$ under European whole-fund waterfall |
-| **LP Net TVPI / Net IRR** | **2.10x / 14.44%** | Net LP value ($420.0M / $200.0M) and implied annualized net return |
+| **GP Carried Interest (20%)** | **$55.00M** | Four-tier European whole-fund distribution, including a full GP catch-up |
+| **Fees & Org Expenses** | $36.00M | Deducted between $200M committed capital and $164M investable capital |
+| **LP Net TVPI / Net IRR** | **2.10x / 14.44%** | Net LP value ($420.0M / $200.0M) after carry |
+
+### Distribution tiers
+
+The fund waterfall is calculated on gross portfolio distributions and allocates proceeds in this order:
+
+1. **Return of committed capital:** 100% to LPs until **$200.00M** has been returned.
+2. **8.0% compounded hurdle:** 100% to LPs until total LP distributions reach **$305.39M** (using a 5.5-year average hold).
+3. **100% GP catch-up:** 100% to the GP from **$305.39M to $331.74M**. This catch-up equals the hurdle profit multiplied by `20% / 80%`, so the GP receives 20% of profits distributed through the hurdle.
+4. **Residual split:** Above **$331.74M**, distribute **80% to LPs / 20% to the GP**.
+
+At **$475.0M**, the catch-up and residual tiers produce exactly **$55.00M** carry and **$420.00M** in LP net proceeds. Fees and organizational expenses are already reflected in the reduction from committed capital to investable capital, and are not subtracted again from gross portfolio distributions. The waterfall conservation check is `LP net proceeds + GP carry = gross portfolio value`.
 
 ---
 
@@ -81,7 +95,7 @@ Six verification guardrails codified to audit VC deal structuring and LLM-genera
 | **Participating Preferred Cap** | Allowing Participating Preferred investors to double-dip indefinitely past their participation cap without converting. | Enforce $\min(\text{Pref} + \text{Pro-Rata}, \text{Cap})$ and switch to Common conversion once Common payout exceeds the cap. |
 | **Multi-Class Conversion Coupling** | Evaluating one investor's conversion threshold assuming other preferred classes remain unconverted when they would rationally convert. | Solve simultaneously across all classes for the **Nash Equilibrium** common share denominator. |
 | **Gross MOIC vs. Net TVPI Basis** | Dividing gross portfolio proceeds by Committed Capital instead of Investable Capital (or forgetting fee drag in LP Net TVPI). | Compute **Gross MOIC** on Investable Capital ($164M) and **TVPI / DPI / Net IRR** on Committed Capital ($200M). |
-| **European vs. American Carry** | Paying GP carried interest on early profitable exits before LPs recover 100% of total fund Committed Capital + Hurdle. | Apply **European Whole-Fund Waterfall**: return Committed Capital + 8% hurdle prior to distributing 20% carry. |
+| **European vs. American Carry** | Paying GP carried interest on early profitable exits before LPs recover 100% of total fund Committed Capital + Hurdle. | Apply **European Whole-Fund Waterfall**: return Committed Capital + 8% hurdle, complete the GP catch-up, then split residual proceeds 80/20. |
 
 ---
 
@@ -89,5 +103,6 @@ Six verification guardrails codified to audit VC deal structuring and LLM-genera
 
 ```bash
 pip install -r requirements.txt
+python -m pytest -v
 python vc_captable_waterfall_model.py
 ```
